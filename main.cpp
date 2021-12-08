@@ -11,10 +11,21 @@ using namespace std;
 
 
 void print(vector < vector < pair <int, int> > > *braid){
-    for(auto level:*braid){
-        for(auto el: level){
-            cout << el.first << "(" << el.second << ")\t";
+    for(int i = 0; i < braid->size(); i++){
+        auto &layer = braid->at(i);
+        for(int j = 0; j < layer.size(); j++){
+            auto el = layer.at(j);
+            if(el.second == 0){
+                cout << "| ";
+                continue;
+            }
+            if(j == layer.size() - 1) continue;
+            if(el.first != braid->at(i-1).at(j+1).first) continue;
+
+            cout << (el.second == 1 ? " /  " : " \\  ");
         }
+        cout << "\n";
+        for(int j = 0; j < layer.size(); j++) cout << "| ";
         cout << "\n";
     }
 }
