@@ -11,10 +11,21 @@ using namespace std;
 
 
 void print(vector < vector < pair <int, int> > > *braid){
-    for(auto level:*braid){
-        for(auto el: level){
-            cout << el.first << "(" << el.second << ")\t";
+    for(int i = 0; i < braid->size(); i++){
+        auto &layer = braid->at(i);
+        for(int j = 0; j < layer.size(); j++){
+            auto el = layer.at(j);
+            if(el.second == 0){
+                cout << "| ";
+                continue;
+            }
+            if(j == layer.size() - 1) continue;
+            if(el.first != braid->at(i-1).at(j+1).first) continue;
+
+            cout << (el.second == 1 ? " /  " : " \\  ");
         }
+        cout << "\n";
+        for(int j = 0; j < layer.size(); j++) cout << "| ";
         cout << "\n";
     }
 }
@@ -75,47 +86,72 @@ vector < vector < pair <int, int> > > *generate(int n, int h){
     return braid;
 }
 
-void untangle(vector < vector < pair <int, int> > > *braid){
-    int knot; //1 if first is on top, -1 if second
-    int test_knot;
-    int start_id;
-    for(int j = 0; j < braid->at(0).size()-1; j++){
-        start_id = 0;
-        knot = 0;
-        int ini_a = braid->at(start_id).at(j).first;
-        int ini_b = braid->at(start_id).at(j+1).first;
-        for(int i = 1; i < braid->size(); i++){
-            int test_a = braid->at(i).at(j).first;
-            int test_b = braid->at(i).at(j+1).first;
-            test_knot = braid->at(i).at(j).second;
-            if (ini_a == test_b && ini_b == test_a) {
-                if (knot == -test_knot) {
-                    for(int m = start_id+1; m< i; m++){
-                        swap(braid->at(m).at(j).first, braid->at(m).at(j+1).first);
-                        braid->at(m).at(j).second = 0;
-                        braid->at(m).at(j+1).second = 0;
-                    }
-                    braid->at(i).at(j).second = 0;
-                    braid->at(i).at(j+1).second = 0;
-                }
-                else{
-                    //test_knot = braid->at(start_id).at(j).second;
-                }
+// Tries to unentangle the braid; returns false if nothing was changed
+bool untangle(vector < vector < pair <int, int> > > *braid){
+    // Will remain false if there are no untanglements possible
+    bool changed_anything = false;
+
+    // col - number of a column that's being checked
+    for(int col = 0; col < braid->at(0).size() - 1; col++){
+        int last1, last2, last_knot, last_knot_layer;
+        last1 = braid->at(0).at(col).first;
+        last2 = braid->at(0).at(col+1).first;
+        last_knot = 0;
+        last_knot_layer = 0;
+
+        // Scan through the layers of the braid
+        for(int layer = 0; layer < braid->size(); layer++){
+            int curr1, curr2;
+            curr1 = braid->at(layer).at(col).first;
+            curr2 = braid->at(layer).at(col+1).first;
+
+            // Nothing has changed so go to the next layer
+            if(last1 == curr1 && last2 == curr2) continue;
+
+            // There was a different change than exchange
+            // between threads 1 and 2
+            if(last1 != curr2 || last2 != curr1) {
+                last1 = curr1;
+                last2 = curr2;
+                last_knot = 0;
+                last_knot_layer = 0;
+                continue;
             }
-            else{
-                if(test_a == ini_a && test_b == ini_b){
-                    test_knot = braid->at(start_id).at(j).second;
+
+            // Here is the exchange between threads 1 and 2
+            int knot = braid->at(layer).at(col).second;
+            if(knot * last_knot == -1){
+                // Current and last knots are opposites
+                // Therefore we can swap the threads
+                for(int i = last_knot_layer; i < layer; i++){
+                    braid->at(i).at(col).first = curr1;
+                    braid->at(i).at(col+1).first = curr2;
                 }
-                else{
-                    start_id = i;
-                }
+
+                // Mark the former knots as straight lines
+                braid->at(last_knot_layer).at(col).second = 0;
+                braid->at(last_knot_layer).at(col+1).second = 0;
+                braid->at(layer).at(col).second = 0;
+                braid->at(layer).at(col+1).second = 0;
+
+                last1 = last2 = -1;
+                last_knot = 0;
+                last_knot_layer = 0;
+
+                changed_anything = true;
+            }else{
+                // Alas, the last two knots don't cancel each other
+                last1 = curr1;
+                last2 = curr2;
+                last_knot = knot;
+                last_knot_layer = layer;
             }
-            knot = test_knot;
-            ini_b = test_b;
-            ini_a = test_a;
         }
     }
+
+    return changed_anything;
 }
+
 
 int main() {
     srand(time(NULL));
@@ -123,11 +159,10 @@ int main() {
     int n = 3;
     int h = 10;
     //auto braid = generate(n, h);
-    auto braid = read_data("C:\\Users\\Karol\\CLionProjects\\braids\\test.txt");
+    auto braid = read_data("test.txt");
     print(braid);
     cout << "________\n";
-    untangle(braid);
-    untangle(braid);
+    while(untangle(braid));
     print(braid);
 
     return 0;
