@@ -9,6 +9,8 @@
 
 using namespace std;
 
+typedef vector < vector < pair <int, int> > > braid;
+
 
 void print(vector < vector < pair <int, int> > > *braid){
     for(int i = 0; i < braid->size(); i++){
@@ -154,6 +156,35 @@ bool untangle(vector < vector < pair <int, int> > > *braid){
 }
 
 
+// Checks whether the braid doesn't consist of distinct sub-braids
+// Inconsistent braids have columns between threads without a knot
+// The braid must be unentangled before this operation
+bool is_consistent(braid *braid){
+    for(int col = 0; col < braid->at(0).size() - 1; col++){
+        bool knot_found = false;
+
+        int prev1 = braid->at(0).at(col).first;
+        int prev2 = braid->at(0).at(col+1).first;
+        for(int layer = 1; layer < braid->size(); layer++){
+            int curr1 = braid->at(layer).at(col).first;
+            int curr2 = braid->at(layer).at(col+1).first;
+
+            // Found a knot between col and col+1
+            if(curr1 == prev2 && curr2 == prev1){
+                knot_found = true;
+                break;
+            }
+
+            prev1 = curr1;
+            prev2 = curr2;
+        }
+
+        if(!knot_found) return false;
+    }
+    return true;
+}
+
+
 int main() {
     srand(time(NULL));
     cout << "Welcome to braid generator" << endl;
@@ -165,6 +196,7 @@ int main() {
     cout << "________\n";
     while(untangle(braid));
     print(braid);
+    cout << is_consistent(braid) << endl;
 
     return 0;
 }
