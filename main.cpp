@@ -62,6 +62,7 @@ vector < vector < pair <int, int> > > *generate(int n, int h){
     level->clear();
     for(int i = 1; i < h; i++){
         copy(braid->at(i-1).begin(),  braid->at(i-1).end(), back_inserter(*level));
+        level->at(n-1).second = 0;
         for(int j = 0; j < n-1; j++){
             int a = rand()%100;
             if(a < 50){
@@ -158,8 +159,8 @@ int main() {
     cout << "Welcome to braid generator" << endl;
     int n = 3;
     int h = 10;
-    //auto braid = generate(n, h);
-    auto braid = read_data("test.txt");
+    auto braid = generate(n, h);
+    //auto braid = read_data("test.txt");
     print(braid);
     cout << "________\n";
     while(untangle(braid));
