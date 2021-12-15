@@ -12,7 +12,7 @@ using namespace std;
 typedef vector < vector < pair <int, int> > > braid;
 
 
-void print(vector < vector < pair <int, int> > > *braid){
+void print(braid *braid){
     for(int i = 0; i < braid->size(); i++){
         auto &layer = braid->at(i);
         for(int j = 0; j < layer.size(); j++){
@@ -32,13 +32,13 @@ void print(vector < vector < pair <int, int> > > *braid){
     }
 }
 
-vector < vector < pair <int, int> > > *read_data(string path)
+braid *read_data(string path)
 {
     fstream f;
     f.open(path, ios::in);
     int n, h;
     f >> n >> h;
-    auto *braid = new vector < vector < pair <int, int> > >;
+    auto *braid = new ::braid ;
     auto *level= new vector < pair <int, int> >;
     for(int i = 0; i < h; i++){
         for(int j = 0; j < n; j++){
@@ -54,8 +54,8 @@ vector < vector < pair <int, int> > > *read_data(string path)
     return braid;
 }
 
-vector < vector < pair <int, int> > > *generate(int n, int h){
-    auto *braid = new vector < vector < pair <int, int> > >;
+braid *generate(int n, int h){
+    auto *braid = new ::braid;
     auto *level= new vector < pair <int, int> >;
     for(int i = 0; i < n; i++){
         level->push_back(make_pair(i, 0));
@@ -90,7 +90,7 @@ vector < vector < pair <int, int> > > *generate(int n, int h){
 }
 
 // Tries to unentangle the braid; returns false if nothing was changed
-bool untangle(vector < vector < pair <int, int> > > *braid){
+bool untangle(braid *braid){
     // Will remain false if there are no untanglements possible
     bool changed_anything = false;
 
@@ -184,6 +184,42 @@ bool is_consistent(braid *braid){
     return true;
 }
 
+int visits_all(braid *b)
+{
+    int res = 0;
+    vector <vector <bool>> visited;
+    int n = b->at(0).size();
+    int h = b->size();
+    for(int i = 0; i < n; i ++){
+        vector <bool> tmp;
+        for(int j = 0; j < n; j++){
+            if(i==j){
+                tmp.push_back(true);
+            }
+            else {
+                tmp.push_back(false);
+            }
+        }
+        visited.push_back(tmp);
+    }
+    for(int i = 0; i < n; i++) {
+        int test = 1;
+        int id = 1;
+        while (test < n && id < h) {
+            int act = b->at(id).at(i).first;
+            if (!visited[i][act]) {
+                test++;
+                visited[i][act] = true;
+            }
+            id++;
+        }
+        if (test != n) {
+            res += n - test;
+        }
+    }
+    return res;
+}
+
 
 int main() {
     srand(time(NULL));
@@ -192,11 +228,14 @@ int main() {
     int h = 10;
     auto braid = generate(n, h);
     //auto braid = read_data("test.txt");
-    print(braid);
+    //print(braid);
     cout << "________\n";
     while(untangle(braid));
     print(braid);
     cout << is_consistent(braid) << endl;
+    cout << visits_all(braid) << endl;
+
+    braid->clear();
 
     return 0;
 }
