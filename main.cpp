@@ -11,7 +11,6 @@ using namespace std;
 
 typedef vector < vector < pair <int, int> > > braid;
 
-
 void print(braid *braid){
     for(int i = 0; i < braid->size(); i++){
         auto &layer = braid->at(i);
@@ -38,7 +37,7 @@ braid *read_data(string path)
     f.open(path, ios::in);
     int n, h;
     f >> n >> h;
-    auto *braid = new ::braid ;
+    auto *braid = new ::braid;
     auto *level= new vector < pair <int, int> >;
     for(int i = 0; i < h; i++){
         for(int j = 0; j < n; j++){
@@ -219,22 +218,28 @@ int visits_all(braid *b)
     }
     return res;
 }
-
+int quantity(braid *b){
+    int q = 0;
+    int n = b->at(0).size();
+    q+= n*n-visits_all(b);
+    q+=2*n*n*is_consistent(b);
+    return q;
+}
 
 int main() {
     srand(time(NULL));
     cout << "Welcome to braid generator" << endl;
     int n = 3;
     int h = 10;
-    auto braid = generate(n, h);
-    //auto braid = read_data("test.txt");
-    //print(braid);
+    //auto braid = generate(n, h);
+    auto braid = read_data("test.txt");
+    print(braid);
     cout << "________\n";
     while(untangle(braid));
     print(braid);
     cout << is_consistent(braid) << endl;
     cout << visits_all(braid) << endl;
-
+    cout << quantity(braid) << endl;
     braid->clear();
 
     return 0;
