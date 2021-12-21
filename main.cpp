@@ -293,36 +293,6 @@ void make_knots(braid *b, int layer, int col){
             b->at(layer).at(col+1).first);
 }
 
-
-// Removes the knot at the specified layer, between col and col+1
-void remove_knot(braid *b, int layer, int col){
-    if(layer <= 0) return;
-
-    // The intersecting threads
-    int thr1 = b->at(layer).at(col).first;
-    int thr2 = b->at(layer).at(col+1).first;
-
-    // Check if the knot exists
-    if(thr1 != b->at(layer-1).at(col+1).first) return;
-    if(thr2 != b->at(layer-1).at(col).first) return;
-
-    // Unset the "knot" mark
-    b->at(layer).at(col).second = 0;
-    b->at(layer).at(col+1).second = 0;
-
-    // Swap the threads 1 & 2 below the layer
-    for(int l = layer; l < b->size(); l++){
-        for(int c = 0; c < b->at(0).size(); c++){
-            auto &spot = b->at(l).at(c);
-            if(spot.first == thr1){
-                spot.first = thr2;
-            }else if(spot.first == thr2){
-                spot.first = thr1;
-            }
-        }
-    }
-}
-
 int main() {
     srand(time(NULL));
     cout << "Welcome to braid generator" << endl;
