@@ -226,6 +226,73 @@ int quantity(braid *b){
     return q;
 }
 
+// Swaps the knot (i.e. the upper thread will go at the bottom)
+void swap_threads_in_knot(braid *b, int layer, int col){
+    b->at(layer).at(col).second *= -1;
+    b->at(layer).at(col+1).second *= -1;
+}
+
+// Moves the knot one layer up
+void move_knot_up(braid *b, int layer, int col){
+    if(layer <= 1) return;
+    // The layer above the knot must have straight threads
+    if(b->at(layer-1).at(col).second != 0) return;
+    if(b->at(layer-1).at(col+1).second != 0) return;
+
+    // Copy the knot
+    b->at(layer-1).at(col).second = b->at(layer).at(col).second;
+    b->at(layer-1).at(col+1).second = b->at(layer).at(col+1).second;
+
+    // Delete the original knot
+    b->at(layer).at(col).second = b->at(layer).at(col+1).second = 0;
+
+    // Swap the threads
+    swap(
+            b->at(layer-1).at(col).first,
+            b->at(layer-1).at(col+1).first);
+}
+
+// Moves the knot one layer down
+void move_knot_down(braid *b, int layer, int col){
+    if(layer >= b->size() - 2) return;
+    // The layer below the knot must have straight threads
+    if(b->at(layer+1).at(col).second != 0) return;
+    if(b->at(layer+1).at(col+1).second != 0) return;
+
+    // Copy the knot
+    b->at(layer+1).at(col).second = b->at(layer).at(col).second;
+    b->at(layer+1).at(col+1).second = b->at(layer).at(col+1).second;
+
+    // Delete the original knot
+    b->at(layer).at(col).second = b->at(layer).at(col+1).second = 0;
+
+    // Swap the threads
+    swap(
+            b->at(layer).at(col).first,
+            b->at(layer).at(col+1).first);
+}
+
+// Makes a knot in the specified layer and in the next one
+void make_knots(braid *b, int layer, int col){
+    if(layer >= b->size() - 2) return;
+    // The threads must be straight for two layers
+    if(b->at(layer).at(col).second != 0) return;
+    if(b->at(layer).at(col+1).second != 0) return;
+    if(b->at(layer+1).at(col).second != 0) return;
+    if(b->at(layer+1).at(col+1).second != 0) return;
+
+    // Mark the knots
+    b->at(layer).at(col).second = 1;
+    b->at(layer).at(col+1).second = -1;
+    b->at(layer+1).at(col).second = 1;
+    b->at(layer+1).at(col+1).second = -1;
+
+    // Swap the threads
+    swap(
+            b->at(layer).at(col).first,
+            b->at(layer).at(col+1).first);
+}
+
 int main() {
     srand(time(NULL));
     cout << "Welcome to braid generator" << endl;
