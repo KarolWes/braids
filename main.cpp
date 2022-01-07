@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <string>
+#define TABU_SIZE 20
+
 
 using namespace std;
 
@@ -225,7 +227,15 @@ int quantity(braid *b){
     q+=2*n*n*is_consistent(b);
     return q;
 }
-
+bool detectKnot(braid *b, int layer, int col){
+    bool res = false;
+    if(b->at(layer).at(col).second != 0 && b->at(layer).at(col+1).second != 0){
+        if (b->at(layer-1).at(col).first == b->at(layer).at(col+1).first && b->at(layer).at(col+1).first == b->at(layer-1).at(col).first ) {
+            res = true;
+        }
+    }
+    return res;
+}
 // Swaps the knot (i.e. the upper thread will go at the bottom)
 void swap_threads_in_knot(braid *b, int layer, int col){
     b->at(layer).at(col).second *= -1;
@@ -239,17 +249,20 @@ void move_knot_up(braid *b, int layer, int col){
     if(b->at(layer-1).at(col).second != 0) return;
     if(b->at(layer-1).at(col+1).second != 0) return;
 
-    // Copy the knot
-    b->at(layer-1).at(col).second = b->at(layer).at(col).second;
-    b->at(layer-1).at(col+1).second = b->at(layer).at(col+1).second;
+    if(detectKnot(b,layer,col)){
+        // Copy the knot
+        b->at(layer-1).at(col).second = b->at(layer).at(col).second;
+        b->at(layer-1).at(col+1).second = b->at(layer).at(col+1).second;
 
-    // Delete the original knot
-    b->at(layer).at(col).second = b->at(layer).at(col+1).second = 0;
+        // Delete the original knot
+        b->at(layer).at(col).second = b->at(layer).at(col+1).second = 0;
 
-    // Swap the threads
-    swap(
-            b->at(layer-1).at(col).first,
-            b->at(layer-1).at(col+1).first);
+        // Swap the threads
+        swap(
+                b->at(layer-1).at(col).first,
+                b->at(layer-1).at(col+1).first);
+    }
+
 }
 
 // Moves the knot one layer down
@@ -258,18 +271,21 @@ void move_knot_down(braid *b, int layer, int col){
     // The layer below the knot must have straight threads
     if(b->at(layer+1).at(col).second != 0) return;
     if(b->at(layer+1).at(col+1).second != 0) return;
+    //how to detect a knot???
+    if (detectKnot(b, layer, col)){
+        // Copy the knot
+        b->at(layer+1).at(col).second = b->at(layer).at(col).second;
+        b->at(layer+1).at(col+1).second = b->at(layer).at(col+1).second;
 
-    // Copy the knot
-    b->at(layer+1).at(col).second = b->at(layer).at(col).second;
-    b->at(layer+1).at(col+1).second = b->at(layer).at(col+1).second;
+        // Delete the original knot
+        b->at(layer).at(col).second = b->at(layer).at(col+1).second = 0;
 
-    // Delete the original knot
-    b->at(layer).at(col).second = b->at(layer).at(col+1).second = 0;
+        // Swap the threads
+        swap(
+                b->at(layer).at(col).first,
+                b->at(layer).at(col+1).first);
+    }
 
-    // Swap the threads
-    swap(
-            b->at(layer).at(col).first,
-            b->at(layer).at(col+1).first);
 }
 
 // Makes a knot in the specified layer and in the next one
@@ -293,6 +309,67 @@ void make_knots(braid *b, int layer, int col){
             b->at(layer).at(col+1).first);
 }
 
+void removeFirst(vector <pair < braid* , int > >* braids){
+    auto newBraids = new vector <pair < braid* , int > >;
+    for(int i = 1; i < braids->size(); i++){
+        newBraids->push_back(braids->at(i));
+    }
+    braids = newBraids;
+}
+
+vector <pair < braid* , int > >* generateNeighbours(braid *b){
+    auto neighbourhood = new vector <pair < braid* , int > >;
+    braid *tmp = b;
+    swap_threads_in_knot(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+    while(untangle(tmp));
+    neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
+    tmp = b;
+    move_knot_up(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+    while(untangle(tmp));
+    neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
+    tmp = b;
+    move_knot_down(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+    while(untangle(tmp));
+    neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
+    tmp = b;
+    make_knots(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+    while(untangle(tmp));
+    neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
+    return neighbourhood;
+}
+
+void tabuSearch(braid *b){
+    pair < braid* , int > best = make_pair(b, quantity(b));
+    pair < braid* , int > candidate = best;
+    auto tabuList = new vector <pair < braid* , int > >;
+    auto neighborhood = new vector <pair < braid* , int > >;
+    tabuList->push_back(best);
+    int gen = 0;
+    while(gen++ < 100){//stopping condition? quantity = 0? generations?
+        neighborhood->clear();
+        neighborhood = generateNeighbours(candidate.first);
+        for(auto neighbour: *neighborhood){
+            if(find(tabuList->begin(), tabuList->end(), neighbour) == tabuList->end()){
+                if(neighbour.second > candidate.second){
+                    candidate = neighbour;
+                }
+            }
+        }
+        if(candidate.second > best.second){
+            best = candidate;
+        }
+        tabuList->push_back(candidate);
+        if(tabuList->size() > TABU_SIZE){
+            removeFirst(tabuList);
+        }
+
+        cout << gen << " " << best.second << "\t";
+    }
+    cout << endl;
+    print(best.first);
+}
+
+
 int main() {
     srand(time(NULL));
     cout << "Welcome to braid generator" << endl;
@@ -307,6 +384,9 @@ int main() {
     cout << is_consistent(braid) << endl;
     cout << visits_all(braid) << endl;
     cout << quantity(braid) << endl;
+    cout << "________\n";
+    tabuSearch(braid);
+
     braid->clear();
 
     return 0;
