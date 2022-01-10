@@ -13,6 +13,7 @@ using namespace std;
 
 typedef vector < vector < pair <int, int> > > braid;
 
+
 void print(braid *braid){
     for(int i = 0; i < braid->size(); i++){
         auto &layer = braid->at(i);
@@ -308,13 +309,13 @@ void make_knots(braid *b, int layer, int col){
             b->at(layer).at(col).first,
             b->at(layer).at(col+1).first);
 }
-
-void removeFirst(vector <pair < braid* , int > >* braids){
-    auto newBraids = new vector <pair < braid* , int > >;
-    for(int i = 1; i < braids->size(); i++){
-        newBraids->push_back(braids->at(i));
+template <typename T>
+T* removeFirst(T* list){
+    auto newList = new T;
+    for(int i = 1; i < list->size(); i++){
+        newList->push_back(list->at(i));
     }
-    braids = newBraids;
+    return newList;
 }
 
 vector <pair < braid* , int > >* generateNeighbours(braid *b){
@@ -345,7 +346,7 @@ void tabuSearch(braid *b){
     auto neighborhood = new vector <pair < braid* , int > >;
     tabuList->push_back(best);
     int gen = 0;
-    while(gen++ < 100){//stopping condition? quantity = 0? generations?
+    while(gen++ < 10000){//stopping condition? quantity = 0? generations?
         neighborhood->clear();
         neighborhood = generateNeighbours(candidate.first);
         for(auto neighbour: *neighborhood){
@@ -360,7 +361,7 @@ void tabuSearch(braid *b){
         }
         tabuList->push_back(candidate);
         if(tabuList->size() > TABU_SIZE){
-            removeFirst(tabuList);
+            tabuList = removeFirst(tabuList);
         }
 
         cout << gen << " " << best.second << "\t";
