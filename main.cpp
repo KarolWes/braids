@@ -56,6 +56,19 @@ braid *read_data(string path)
     return braid;
 }
 
+braid *generatePlain(int n, int h){
+    auto *braid = new ::braid;
+    auto *level= new vector < pair <int, int> >;
+    for(int j = 0; j < h; j++){
+        for(int i = 0; i < n; i++){
+            level->push_back(make_pair(i, 0));
+        }
+        braid->push_back(*level);
+        level->clear();
+    }
+    return braid;
+}
+
 braid *generate(int n, int h){
     auto *braid = new ::braid;
     auto *level= new vector < pair <int, int> >;
@@ -317,40 +330,56 @@ T* removeFirst(T* list){
     }
     return newList;
 }
+braid *deepCopy(braid *b){
+    braid *cp = new braid;
+    for(auto el: *b){
+        cp->push_back(el);
+    }
+    return cp;
+}
 
 vector <pair < braid* , int > >* generateNeighbours(braid *b){
     auto neighbourhood = new vector <pair < braid* , int > >;
-    braid *tmp = b;
+    braid *tmp = deepCopy(b);
     swap_threads_in_knot(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
     while(untangle(tmp));
     neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
-    tmp = b;
+    tmp = deepCopy(b);
     move_knot_up(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
     while(untangle(tmp));
     neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
-    tmp = b;
+    tmp = deepCopy(b);
     move_knot_down(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
     while(untangle(tmp));
     neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
-    tmp = b;
+    tmp = deepCopy(b);
     make_knots(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
     while(untangle(tmp));
     neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
     return neighbourhood;
 }
 
+bool find(vector <pair < braid* , int > >* list, braid* target){
+    for(auto el: *list){
+        if(equal(el.first->begin(), el.first->end(), target->begin())){
+            return true;
+        }
+    }
+    return false;
+}
+
 void tabuSearch(braid *b){
     pair < braid* , int > best = make_pair(b, quantity(b));
-    pair < braid* , int > candidate = best;
+    pair < braid* , int > candidate = make_pair(b, quantity(b));
     auto tabuList = new vector <pair < braid* , int > >;
     auto neighborhood = new vector <pair < braid* , int > >;
-    tabuList->push_back(best);
+    tabuList->push_back(make_pair(deepCopy(best.first), best.second));
     int gen = 0;
-    while(gen++ < 10000){//stopping condition? quantity = 0? generations?
+    while(gen++ < 1000){//stopping condition? quantity = 0? generations?
         neighborhood->clear();
         neighborhood = generateNeighbours(candidate.first);
         for(auto neighbour: *neighborhood){
-            if(find(tabuList->begin(), tabuList->end(), neighbour) == tabuList->end()){
+            if(!find(tabuList, neighbour.first)){
                 if(neighbour.second > candidate.second){
                     candidate = neighbour;
                 }
@@ -359,7 +388,7 @@ void tabuSearch(braid *b){
         if(candidate.second > best.second){
             best = candidate;
         }
-        tabuList->push_back(candidate);
+        tabuList->push_back(make_pair(deepCopy(candidate.first), candidate.second));
         if(tabuList->size() > TABU_SIZE){
             tabuList = removeFirst(tabuList);
         }
@@ -377,7 +406,8 @@ int main() {
     int n = 3;
     int h = 10;
     //auto braid = generate(n, h);
-    auto braid = read_data("test.txt");
+    //auto braid = read_data("test.txt");
+    auto braid = generatePlain(n, h);
     print(braid);
     cout << "________\n";
     while(untangle(braid));
