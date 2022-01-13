@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include <vector>
 #include <utility>
 #include <algorithm>
@@ -234,7 +235,7 @@ int visits_all(braid *b)
     }
     return res;
 }
-int quantity(braid *b){
+int quantity(braid *b){ //max quantity = 3n^2
     int q = 0;
     int n = b->at(0).size();
     q+= n*n-visits_all(b);
@@ -304,7 +305,7 @@ void move_knot_down(braid *b, int layer, int col){
 
 // Makes a knot in the specified layer and in the next one
 void make_knots(braid *b, int layer, int col){
-    if(layer >= b->size() - 2) return;
+    if(layer > b->size() - 2) return;
     // The threads must be straight for two layers
     if(b->at(layer).at(col).second != 0) return;
     if(b->at(layer).at(col+1).second != 0) return;
@@ -375,25 +376,29 @@ void tabuSearch(braid *b){
     auto neighborhood = new vector <pair < braid* , int > >;
     tabuList->push_back(make_pair(deepCopy(best.first), best.second));
     int gen = 0;
-    while(gen++ < 1000){//stopping condition? quantity = 0? generations?
+    int max_quantity = 3*(b->at(0).size())*(b->at(0).size());
+    while(candidate.second < max_quantity && gen++ < 100000){//stopping condition? quantity = 0? generations?
         neighborhood->clear();
         neighborhood = generateNeighbours(candidate.first);
+        shuffle(neighborhood->begin(),  neighborhood->end(), std::mt19937(std::random_device()()));
         for(auto neighbour: *neighborhood){
             if(!find(tabuList, neighbour.first)){
-                if(neighbour.second > candidate.second){
-                    candidate = neighbour;
+                if(neighbour.second >= candidate.second){
+                    candidate = make_pair(deepCopy(neighbour.first), neighbour.second);
+                    break;
                 }
             }
         }
         if(candidate.second > best.second){
-            best = candidate;
+            best = make_pair(deepCopy(candidate.first), candidate.second);
         }
         tabuList->push_back(make_pair(deepCopy(candidate.first), candidate.second));
         if(tabuList->size() > TABU_SIZE){
             tabuList = removeFirst(tabuList);
         }
 
-        cout << gen << " " << best.second << "\t";
+        cout <<gen << " " << best.second << "\t";
+
     }
     cout << endl;
     print(best.first);
@@ -403,8 +408,8 @@ void tabuSearch(braid *b){
 int main() {
     srand(time(NULL));
     cout << "Welcome to braid generator" << endl;
-    int n = 3;
-    int h = 10;
+    int n = 10;
+    int h = 100;
     //auto braid = generate(n, h);
     //auto braid = read_data("test.txt");
     auto braid = generatePlain(n, h);
