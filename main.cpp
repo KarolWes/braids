@@ -235,11 +235,24 @@ int visits_all(braid *b)
     }
     return res;
 }
-int quantity(braid *b){ //max quantity = 3n^2
+
+int knotCounter(braid *b){
+    int knots = 0;
+    for(auto & i : *b){
+        for(auto & j : i){
+            if(j.second != 0){
+                knots++;
+            }
+        }
+    }
+    return knots/2;
+}
+int quantity(braid *b){ //max quantity = 3n^2+n
     int q = 0;
     int n = b->at(0).size();
     q+= n*n-visits_all(b);
     q+=2*n*n*is_consistent(b);
+    q+= knotCounter(b)/b->size();
     return q;
 }
 bool detectKnot(braid *b, int layer, int col){
@@ -339,6 +352,35 @@ braid *deepCopy(braid *b){
     return cp;
 }
 
+vector <pair < braid* , int > >* generateUnstableNeighbours(braid *b, int changes, int size_of_neigh){
+    auto neighbourhood = new vector <pair < braid* , int > >;
+    for(int i = 0; i < size_of_neigh; i++){
+        braid *tmp = deepCopy(b);
+        for(int j = 0; j < changes; j++){
+            switch(rand()%5){
+                case 0:
+                    swap_threads_in_knot(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+                    break;
+                case 1:
+                    move_knot_up(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+                    break;
+                case 2:
+                    move_knot_down(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+                    break;
+                case 3:case 4:
+                    make_knots(tmp, rand()%(tmp->size()-1)+1, rand()%(tmp->at(0).size()-1));
+                    break;
+                default:
+                    cout << "Something went wrong\n";
+                    return nullptr;
+            }
+        }
+        while(untangle(tmp));
+        neighbourhood->push_back(make_pair(tmp, quantity(tmp)));
+    }
+    return neighbourhood;
+}
+
 vector <pair < braid* , int > >* generateNeighbours(braid *b){
     auto neighbourhood = new vector <pair < braid* , int > >;
     braid *tmp = deepCopy(b);
@@ -368,51 +410,72 @@ bool find(vector <pair < braid* , int > >* list, braid* target){
     }
     return false;
 }
+vector <double>* braidLength(braid *b){
+    int n = b->at(0).size();
+    int h = b->size();
+    auto len = new vector <double>(n);
+    for(int i = 0; i < h; i++){
+        for(int j = 0; j < n; j ++){
+            int address = b->at(i).at(j).first;
+            if(b->at(i).at(j).second == 0){
+                len->at(address) +=1;
+            }
+            else{
+                len->at(address)+=1.41;
+            }
+        }
+    }
+    return len;
+}
 
 void tabuSearch(braid *b){
-    pair < braid* , int > best = make_pair(b, quantity(b));
+    int n = b->at(0).size();
     pair < braid* , int > candidate = make_pair(b, quantity(b));
     auto tabuList = new vector <pair < braid* , int > >;
     auto neighborhood = new vector <pair < braid* , int > >;
-    tabuList->push_back(make_pair(deepCopy(best.first), best.second));
+    tabuList->push_back(make_pair(deepCopy(candidate.first), candidate.second));
     int gen = 0;
-    int max_quantity = 3*(b->at(0).size())*(b->at(0).size());
-    while(candidate.second < max_quantity && gen++ < 100000){//stopping condition? quantity = 0? generations?
+    int max_quantity = 3*n*n+n;
+    while(candidate.second < max_quantity && gen++ < 10000){//stopping condition? quantity = 0? generations?
         neighborhood->clear();
-        neighborhood = generateNeighbours(candidate.first);
+        neighborhood = generateUnstableNeighbours(candidate.first, 3,6);
         shuffle(neighborhood->begin(),  neighborhood->end(), std::mt19937(std::random_device()()));
         for(auto neighbour: *neighborhood){
             if(!find(tabuList, neighbour.first)){
                 if(neighbour.second >= candidate.second){
                     candidate = make_pair(deepCopy(neighbour.first), neighbour.second);
-                    break;
                 }
             }
-        }
-        if(candidate.second > best.second){
-            best = make_pair(deepCopy(candidate.first), candidate.second);
         }
         tabuList->push_back(make_pair(deepCopy(candidate.first), candidate.second));
         if(tabuList->size() > TABU_SIZE){
             tabuList = removeFirst(tabuList);
         }
 
-        cout <<gen << " " << best.second << "\t";
+        cout <<gen << ": " << candidate.second << "\t";
 
     }
     cout << endl;
-    print(best.first);
+    print(candidate.first);
+    cout << endl << "Lengths of strings in braid: \n";
+    auto len = braidLength(candidate.first);
+    for(double el: *len){
+        cout << el << "\t";
+    }
+    double diff = *max_element(len->begin(),  len->end()) - *min_element(len->begin(),  len->end());
+    cout << endl << "Difference between loose strings: "<< diff << endl;
 }
+
 
 
 int main() {
     srand(time(NULL));
     cout << "Welcome to braid generator" << endl;
     int n = 10;
-    int h = 100;
-    //auto braid = generate(n, h);
+    int h = 30;
+    auto braid = generate(n, h);
     //auto braid = read_data("test.txt");
-    auto braid = generatePlain(n, h);
+    //auto braid = generatePlain(n, h);
     print(braid);
     cout << "________\n";
     while(untangle(braid));
