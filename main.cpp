@@ -7,7 +7,11 @@
 #include <cstdlib>
 #include <fstream>
 #include <string>
+#include <chrono>
+
 #define TABU_SIZE 20
+#define GEN_COUNT 100000
+#define MIN(x) x*60000
 
 
 using namespace std;
@@ -428,6 +432,16 @@ vector <double>* braidLength(braid *b){
     return len;
 }
 
+template <
+        class result_t   = std::chrono::milliseconds,
+        class clock_t    = std::chrono::steady_clock,
+        class duration_t = std::chrono::milliseconds
+>
+auto since(std::chrono::time_point<clock_t, duration_t> const& start){
+    return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+} // from Stack Overflow https://stackoverflow.com/a/21995693
+
+
 void tabuSearch(braid *b){
     int n = b->at(0).size();
     pair < braid* , int > candidate = make_pair(b, quantity(b));
@@ -436,7 +450,9 @@ void tabuSearch(braid *b){
     tabuList->push_back(make_pair(deepCopy(candidate.first), candidate.second));
     int gen = 0;
     int max_quantity = 3*n*n+n;
-    while(candidate.second < max_quantity && gen++ < 10000){//stopping condition? quantity = 0? generations?
+    auto start = chrono::steady_clock::now();
+    while(candidate.second < max_quantity  && since(start).count() < MIN(5)){//&& gen < GEN_COUNT
+        gen++;
         neighborhood->clear();
         neighborhood = generateUnstableNeighbours(candidate.first, 3,6);
         shuffle(neighborhood->begin(),  neighborhood->end(), std::mt19937(std::random_device()()));
@@ -473,9 +489,9 @@ int main() {
     cout << "Welcome to braid generator" << endl;
     int n = 10;
     int h = 30;
-    auto braid = generate(n, h);
+    //auto braid = generate(n, h);
     //auto braid = read_data("test.txt");
-    //auto braid = generatePlain(n, h);
+    auto braid = generatePlain(n, h);
     print(braid);
     cout << "________\n";
     while(untangle(braid));
